@@ -3020,24 +3020,24 @@ uses with" concept would not hold.
 
 .. code-block:: llvm
 
-      %A = fdiv undef, %X
-      %B = fdiv %X, undef
+      %A = udiv undef, %X
+      %B = udiv %X, undef
     Safe:
-      %A = undef
+      %A = 0
     b: unreachable
 
 These examples show the crucial difference between an *undefined value*
 and *undefined behavior*. An undefined value (like '``undef``') is
-allowed to have an arbitrary bit-pattern. This means that the ``%A``
-operation can be constant folded to '``undef``', because the '``undef``'
-could be an SNaN, and ``fdiv`` is not (currently) defined on SNaN's.
-However, in the second example, we can make a more aggressive
-assumption: because the ``undef`` is allowed to be an arbitrary value,
-we are allowed to assume that it could be zero. Since a divide by zero
-has *undefined behavior*, we are allowed to assume that the operation
-does not execute at all. This allows us to delete the divide and all
-code after it. Because the undefined operation "can't happen", the
-optimizer can assume that it occurs in dead code.
+*only* allowed to have an arbitrary bit-pattern. Since all bit-patterns
+are valid dividends for ``udiv``, the instruction must be preserved.
+However it *can* be constant folded to zero, because the '``undef``'
+could be a zero, and zero divided by anything is still zero.
+In the second example, the ability for undef to be zero lets us make
+a more aggressive transformation. Since a divide by zero has *undefined
+behavior*, and '``undef``'' could again be zero, we are allowed to
+assume that the operation does not execute at all. This allows us to
+delete the divide and all code after it. Because the undefined operation
+"can't happen", the optimizer can assume that it occurs in dead code.
 
 .. code-block:: text
 
@@ -3047,7 +3047,7 @@ optimizer can assume that it occurs in dead code.
     a: <deleted>
     b: unreachable
 
-These examples reiterate the ``fdiv`` example: a store *of* an undefined
+These examples reiterate the ``udiv`` example: a store *of* an undefined
 value can be assumed to not have any effect; we can assume that the
 value is overwritten with bits that happen to match what was already
 there. However, a store *to* an undefined location could clobber
